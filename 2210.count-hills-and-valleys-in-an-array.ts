@@ -7,7 +7,7 @@ import { expect } from "bun:test";
 
 // @lc code=start
 function countHillValley(nums: number[]): number {
-  var [prev = 0] = nums;
+  let [prev = 0] = nums;
   return nums.reduce((hav, num, idx, arr) => {
     const next = arr[idx + 1] ?? num;
 
