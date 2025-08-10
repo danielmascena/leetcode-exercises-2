@@ -4,6 +4,8 @@
  * [1290] Convert Binary Number in a Linked List to Integer
  */
 
+import { ListNode } from "./utils/utils";
+
 // @lc code=start
 /**
  * Definition for singly-linked list.
@@ -18,7 +20,7 @@
  */
 
 function getDecimalValue(head: ListNode | null): number {
-  var ans = "";
+  let ans = "";
 
   while (head) {
     ans += head.val;
@@ -27,10 +29,6 @@ function getDecimalValue(head: ListNode | null): number {
   return parseInt(ans, 2);
 }
 // @lc code=end
-
-class ListNode {
-  constructor(public val: number = 0, public next: ListNode | null = null) {}
-}
 
 console.log(getDecimalValue(new ListNode(1, new ListNode(0, new ListNode(1)))));
 

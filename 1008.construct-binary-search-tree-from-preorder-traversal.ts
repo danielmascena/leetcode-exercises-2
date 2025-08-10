@@ -1,17 +1,11 @@
 import { expect } from "bun:test";
+import { TreeNode } from "./utils/utils";
 /*
  * @lc app=leetcode id=1008 lang=typescript
  *
  * [1008] Construct Binary Search Tree from Preorder Traversal
  */
 
-class TreeNode {
-  constructor(
-    public val = 0,
-    public left: TreeNode | null = null,
-    public right: TreeNode | null = null
-  ) {}
-}
 // @lc code=start
 /**
  * Definition for a binary tree node.
