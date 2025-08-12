@@ -27,42 +27,30 @@ function insertIntoMaxTree(
   root: TreeNode | null,
   val: number
 ): TreeNode | null {
-  const neoNode = new TreeNode(val);
-  let parent = new TreeNode();
-  parent.left = root;
-  const fakeRoot = parent;
-  let node = root;
-  let side: "left" | "right" = "left";
-
-  while (node) {
-    if (node.val > val) {
-      const { left, right } = node;
-
-      if (right && right.val > val) {
-        side = "right";
-        parent = node;
-        node = right;
-      } else if (left && left.val > val) {
-        side = "left";
-        parent = node;
-        node = left;
-      } else if (left || right) {
-        parent = node;
-        neoNode.left = right ?? left;
-        node = null;
-        side = "right";
-      } else {
-        parent = node;
-        node = null;
-      }
-    } else {
-      neoNode.left = node;
-      node = null;
-    }
+  if (!root) {
+    return new TreeNode(val);
   }
-  parent[side] = neoNode;
-  console.log(count++, fakeRoot.left);
-  return fakeRoot.left;
+  const nodes: TreeNode[] = [];
+  const inorder = (node: TreeNode | null): void => {
+    if (!node) {
+      return;
+    }
+    inorder(node.left);
+    nodes.push(new TreeNode(node.val));
+    inorder(node.right);
+  };
+  const mount = (node: TreeNode, idx: number, len: number): TreeNode => {
+    const nx = nodes[idx]!;
+    if (nx.val > node.val) {
+      nx.left = node;
+      mount(nx, idx + 1, len);
+    } else {
+      node.right = mount(nx, idx + 1, len);
+    }
+  };
+  inorder(root);
+  nodes.push(new TreeNode(val));
+  console.log(nodes);
 }
 // @lc code=end
 
