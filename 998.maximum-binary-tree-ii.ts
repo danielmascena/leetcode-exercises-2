@@ -6,8 +6,6 @@ import { construct, reconstruct, TreeNode } from "./utils/utils";
  * [998] Maximum Binary Tree II
  */
 
-let count = 1;
-
 // @lc code=start
 /**
  * Definition for a binary tree node.
