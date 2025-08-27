@@ -13,8 +13,10 @@ function areaOfMaxDiagonal(dimensions: number[][]): number {
   dimensions.forEach(([lgth = 0, wdth = 0]) => {
     const dl = sqrt(lgth * lgth + wdth * wdth);
 
-    if (dl >= diagLgth) {
+    if (dl > diagLgth) {
       diagLgth = dl;
+      area = lgth * wdth;
+    } else if (dl === diagLgth) {
       area = max(area, lgth * wdth);
     }
   });
@@ -45,3 +47,10 @@ expect(
     [3, 5],
   ])
 ).toBe(20);
+
+/**
+ * Accepted
+ * 816/816 cases passed (2 ms)
+ * Your runtime beats 42.86 % of typescript submissions
+ * Your memory usage beats 71.43 % of typescript submissions (57.6 MB)
+ */
