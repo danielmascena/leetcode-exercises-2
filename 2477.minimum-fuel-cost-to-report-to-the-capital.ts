@@ -8,22 +8,30 @@ import { expect } from "bun:test";
 // @lc code=start
 function minimumFuelCost(roads: number[][], seats: number): number {
   const tree = new Map<number, number[]>();
-  const seen = new Set<number>([0]);
+  const gotSeat = new Set<number>([0]);
+  const leaves: number[] = [];
   var ans = 0;
-  const traverse = (num: number, fuel = 0, seatz = { q: seats - 1 }): void => {
-    if (seen.has(num)) {
-      return;
-    }
-    const arr = tree.get(num)!;
-
-    if (seatz.q <= 0 || arr.length === 1) {
-      ans += fuel;
-    }
+  const traverse = (
+    num: number,
+    seen = new Set<number>(),
+    zeats = seats,
+    fuel = 1
+  ) => {
     seen.add(num);
-    arr.forEach((v) => {
+    tree.get(num)?.forEach((v) => {
+      if (num === 0) {
+        ans += fuel;
+        return;
+      }
       if (!seen.has(v)) {
-        seatz.q--;
-        traverse(v, fuel + 1, seatz);
+        const sn = new Set(seen);
+        if (zeats > 0 && !gotSeat.has(v)) {
+          gotSeat.add(num);
+          zeats--;
+          traverse(v, sn, zeats, fuel);
+        } else {
+          traverse(v, sn, zeats);
+        }
       }
     });
   };
@@ -31,8 +39,13 @@ function minimumFuelCost(roads: number[][], seats: number): number {
     tree.set(a, [...(tree.get(a) ?? []), b]);
     tree.set(b, [...(tree.get(b) ?? []), a]);
   });
-  console.log(tree);
-  tree.get(0)?.forEach((v) => traverse(v, 1));
+  tree.forEach((a, v) => {
+    if (a.length === 1) {
+      leaves.push(v);
+    }
+  });
+  leaves.forEach((v) => traverse(v));
+  console.log(leaves, gotSeat);
   return ans;
 }
 // @lc code=end
