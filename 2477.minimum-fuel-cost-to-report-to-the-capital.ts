@@ -10,28 +10,30 @@ function minimumFuelCost(roads: number[][], seats: number): number {
   const tree = new Map<number, number[]>();
   const gotSeat = new Set<number>([0]);
   const leaves: number[] = [];
+  const trk = new Map<number, number>();
+  const rfn = (acc: number, cur: number) => acc + cur;
+  const seen = new Set<number>();
   var ans = 0;
-  const traverse = (
-    num: number,
-    seen = new Set<number>(),
-    zeats = seats,
-    fuel = 1
-  ) => {
+  const traverse = (num: number, zeats = seats - 1, fuel = [1]) => {
     seen.add(num);
     tree.get(num)?.forEach((v) => {
-      if (num === 0) {
-        ans += fuel;
+      if (v === 0) {
+        ans += fuel.reduce(rfn, 0);
         return;
-      }
-      if (!seen.has(v)) {
-        const sn = new Set(seen);
+      } else if (!seen.has(v)) {
+        fuel.forEach((_, i) => fuel[i]!++);
+
         if (zeats > 0 && !gotSeat.has(v)) {
-          gotSeat.add(num);
-          zeats--;
-          traverse(v, sn, zeats, fuel);
+          gotSeat.add(v);
+          trk.set(v, --zeats);
         } else {
-          traverse(v, sn, zeats);
+          fuel.push(1);
         }
+        traverse(v, zeats, [...fuel]);
+      } else if (trk.has(v) && trk.get(v)! > 0) {
+        ans += fuel.reduce(rfn, 0);
+        gotSeat.add(v);
+        trk.set(v, trk.get(v)! - 1);
       }
     });
   };
@@ -45,7 +47,6 @@ function minimumFuelCost(roads: number[][], seats: number): number {
     }
   });
   leaves.forEach((v) => traverse(v));
-  console.log(leaves, gotSeat);
   return ans;
 }
 // @lc code=end
@@ -74,3 +75,14 @@ expect(
   )
 ).toBe(7);
 expect(minimumFuelCost([], 1)).toBe(0);
+expect(
+  minimumFuelCost(
+    [
+      [0, 1],
+      [0, 2],
+      [1, 3],
+      [1, 4],
+    ],
+    5
+  )
+).toBe(4);
