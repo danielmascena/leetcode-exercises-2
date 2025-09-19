@@ -89,3 +89,5 @@ class FoodRatings {
  */
 // @lc code=end
 export default FoodRatings;
+
+// 73/78 cases passed (N/A)
