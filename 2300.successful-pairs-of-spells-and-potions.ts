@@ -21,19 +21,13 @@ function successfulPairs(
   let ans = new Array<number>(n);
 
   while (i < n) {
-    if (sps[i]?.[0]! * pts[0]?.[0]! >= success) {
-      while (i < n) {
-        ans[sps[i++]?.[1]!] = m;
-      }
-    } else {
-      const sp = sps[i++]!;
-      const [v = 0, p = 0] = sp;
-      let j = 0;
+    const sp = sps[i++]!;
+    const [v = 0, p = 0] = sp;
+    let j = 0;
 
-      for (; j < m && v * pts[j]?.[0]! < success; j++);
+    for (; j < m && v * pts[j]?.[0]! < success; j++);
 
-      ans[p] = m - j;
-    }
+    ans[p] = m - j;
   }
   return ans;
 }
