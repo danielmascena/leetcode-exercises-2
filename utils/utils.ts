@@ -12,6 +12,28 @@ export class TreeNode {
   ) {}
 }
 
+export function contructList(arr: number[]): ListNode {
+  let head = new ListNode(arr[0]);
+  let node = head;
+
+  for (let i = 1, n = arr.length; i < n; i++) {
+    const curr = new ListNode(arr[i]);
+    node.next = curr;
+    node = curr;
+  }
+  return head;
+}
+
+export function reconstructList(head: ListNode | null): number[] {
+  const arr: number[] = [];
+
+  while (head) {
+    arr.push(head.val);
+    head = head.next;
+  }
+  return arr;
+}
+
 export function construct(root: null | TreeNode): (null | number)[] {
   const arr: (null | number)[] = [];
   const queue = [root];
