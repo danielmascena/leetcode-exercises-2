@@ -28,7 +28,7 @@ function numSub(s: string): number {
 
     if (c === "1") {
       l1s++;
-    } else if (l1s) {
+    } /* else if (l1s)*/ else {
       ans += calcTotal(l1s);
       l1s = 0;
     }
