@@ -12,10 +12,10 @@ function maxKDivisibleComponents(
   values: number[],
   k: number
 ): number {
-  const { max } = Math;
   const meg = Array.from({ length: n }, (_) => new Array<number>());
   const bkts: string[] = [];
   const opts = new Set<number[]>();
+  let zeros = 0;
   let ans = 0;
   const snd = (
     idx: number,
@@ -28,15 +28,31 @@ function maxKDivisibleComponents(
     }
     console.log({ idx }, { seen }, { nodes }, { sum });
 
+    const val = values[idx];
     seen.add(idx);
-    sum += values[idx];
-    nodes += `${idx},`;
 
-    if (sum % k === 0) {
-      bkts.push(nodes);
+    if (val) {
+      sum += val;
+      nodes += `${idx},`;
+    }
+
+    if (val) {
+      if (sum % k === 0) {
+        bkts.push(
+          nodes
+            .split(",")
+            .slice(0, -1)
+            .map(Number)
+            .sort((a, b) => a - b)
+            .join(",")
+        );
+        meg?.[idx].forEach((j) => snd(j, new Set(seen)));
+      }
+      meg[idx].forEach((j) => snd(j, new Set(seen), nodes, sum));
+    } else {
+      zeros++;
       meg?.[idx].forEach((j) => snd(j, new Set(seen)));
     }
-    meg[idx].forEach((j) => snd(j, new Set(seen), nodes, sum));
   };
 
   for (const [a, b] of edges) {
@@ -49,7 +65,7 @@ function maxKDivisibleComponents(
     }
   });
   console.log(meg, bkts);
-  return ans;
+  return new Set(bkts).size + zeros;
 }
 // @lc code=end
 
