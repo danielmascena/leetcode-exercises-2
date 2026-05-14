@@ -1,0 +1,37 @@
+{
+  "sonarlint.rules": {
+    /* C Rules */
+    "c:S1172": { "level": "on" }, // Unused function parameters should be removed
+    "c:S106": { "level": "on" },  // Standard outputs should not be used (prefer loggers)
+    "c:S1854": { "level": "on" }, // Dead stores should be removed
+
+    /* Java Rules */
+    "java:S106": { "level": "on" },  // System.out or System.err should not be used
+    "java:S1161": { "level": "on" }, // "@Override" should be used on overriding methods
+    "java:S115": {                   // Constant names should comply with a naming convention
+      "level": "on",
+      "parameters": {
+        "format": "^[A-Z][A-Z0-Z0-9]*(_[A-Z0-9]+)*$"
+      }
+    },
+    "java:S1186": { "level": "on" }, // Methods should not be empty
+
+    /* JavaScript & TypeScript Rules */
+    "javascript:S1135": { "level": "on" }, // "TODO" comments should be tracked
+    "javascript:S3776": {                  // Cognitive Complexity of functions should not be too high
+      "level": "on",
+      "parameters": {
+        "threshold": "15"
+      }
+    },
+    "javascript:S1186": { "level": "on" }, // Function bodies should not be empty
+    "typescript:S101": {                   // Class names should comply with a naming convention
+      "level": "on",
+      "parameters": {
+        "format": "^[A-Z][a-zA-Z0-9]*$"
+      }
+    },
+    "typescript:S125": { "level": "on" },  // Sections of code should not be commented out
+    "typescript:S4325": { "level": "on" }  // Redundant access modifiers should be removed
+  }
+}

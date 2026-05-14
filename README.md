@@ -1,5 +1,5 @@
 #leetcode-exercises-2
 
-Bun & TypeScript
+Stack: `C` and `Bun`/`TypeScript`
 
 Esc-M on the Mac (`.multiline`).
