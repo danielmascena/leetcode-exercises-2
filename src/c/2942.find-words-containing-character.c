@@ -1,6 +1,6 @@
-#include <stdio.h>
 #include <stdlib.h>
 #include <stdbool.h>
+#include <stdio.h>
 
 /*
  * @lc app=leetcode id=2942 lang=c
@@ -9,85 +9,88 @@
  */
 
 // @lc code=start
-bool includes(char *word, char x)
-{
-    for (int i = 0; word[i] != '\0'; i++)
-    {
-        if (word[i] == x)
-            return true;
-    }
-    return false;
-}
+
+bool contains(char *word, char c);
 
 /**
  * Note: The returned array must be malloced, assume caller calls free().
  */
 int *findWordsContaining(char **words, int wordsSize, char x, int *returnSize)
 {
-    int count = 0;
+    *returnSize = 0;
 
     for (int i = 0; i < wordsSize; i++)
     {
-        char *word = words[i];
-
-        if (includes(word, x))
+        if (contains(words[i], x))
         {
-            count++;
+            (*returnSize)++;
         }
     }
-    int *ans = malloc(count * sizeof(int));
+    int *ans = malloc(*returnSize * sizeof(int));
 
     for (int i = 0, j = 0; i < wordsSize; i++)
     {
-        if (includes(words[i], x))
+        if (contains(words[i], x))
         {
             ans[j++] = i;
         }
     }
-    *returnSize = count;
     return ans;
 }
+
+bool contains(char *word, char c)
+{
+    for (int i = 0; word[i] != '\0'; i++)
+    {
+        if (word[i] == c)
+            return true;
+    }
+    return false;
+}
+
 // @lc code=end
 
-void showResult(int *ans, int size)
+void displayAnswer(int *ans, int size, int r)
 {
-    puts("The result is: [");
+    printf("Answer %d: ", r);
 
     for (int i = 0; i < size; i++)
     {
-        printf("%d,", ans[i]);
+        printf("%d ", ans[i]);
     }
-    puts("]");
+    puts("");
 }
 
 int main(void)
 {
-    char *words1[] = {"leet", "code"};
+    char *words1[] = {"leet", "coode"};
     char *words2[] = {"abc", "bcd", "aaaa", "cbc"};
     char *words3[] = {"abc", "bcd", "aaaa", "cbc"};
 
-    int ansSize1;
-    int ansSize2;
-    int ansSize3;
+    int wSize1 = 0;
+    int wSize2 = 0;
+    int wSize3 = 0;
 
-    int *ans1 = findWordsContaining(words1, sizeof(words1) / sizeof(words1[0]), 'e', &ansSize1);
-    int *ans2 = findWordsContaining(words2, sizeof(words2) / sizeof(words2[0]), 'a', &ansSize2);
-    int *ans3 = findWordsContaining(words3, sizeof(words3) / sizeof(words3[0]), 'z', &ansSize3);
+    int *ans1 = findWordsContaining(words1, 2, 'e', &wSize1);
+    int *ans2 = findWordsContaining(words2, 4, 'a', &wSize2);
+    int *ans3 = findWordsContaining(words3, 4, 'z', &wSize3);
 
-    showResult(ans1, ansSize1);
-    showResult(ans2, ansSize2);
-    showResult(ans3, ansSize3);
+    puts("##### ANSWERS ####");
+
+    displayAnswer(ans1, wSize1, 1);
+    displayAnswer(ans2, wSize2, 2);
+    displayAnswer(ans3, wSize3, 3);
 
     free(ans1);
     free(ans2);
     free(ans3);
 
-    return 0;
+    return EXIT_SUCCESS;
 }
 
-/**
- * Accepted
-912/912 cases passed (0 ms)
-Your runtime beats 100 % of c submissions
-Your memory usage beats 58.14 % of c submissions (13.1 MB)
- */
+/*
+    Accepted
+    912/912 cases passed (1 ms)
+    Your runtime beats 34.27 % of c submissions
+    Your memory usage beats 96.71 % of c submissions (12.9 MB)
+*/
