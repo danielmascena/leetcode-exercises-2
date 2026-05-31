@@ -22,17 +22,18 @@ char *decodeMessage(char *key, char *message)
     {
         const int c = key[i];
 
-        if (c >= 97 && lts[c - 97] < 97)
+        if (c >= 'a' && lts[c - 'a'] < 'a')
         {
-            lts[c - 97] = l++;
+            lts[c - 'a'] = l++;
         }
     }
     int i = 0;
+
     for (; message[i] != '\0'; i++)
     {
         const char c = message[i];
-        if (c >= 97)
-            ans[i] = lts[c - 97];
+        if (c >= 'a')
+            ans[i] = lts[c - 'a'];
     }
     ans[i] = '\0';
     return ans;

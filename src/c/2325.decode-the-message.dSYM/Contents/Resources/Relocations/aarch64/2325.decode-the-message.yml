@@ -1,0 +1,5 @@
+---
+triple:          'arm64-apple-darwin'
+binary-path:     '/Users/danielmascena/workspace/leetcode-exercises-2/src/c/2325.decode-the-message'
+relocations:     []
+...
