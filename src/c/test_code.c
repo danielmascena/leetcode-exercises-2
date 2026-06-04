@@ -46,5 +46,11 @@ int main(void)
     }
     puts("");
 
+    typedef struct Name
+    {
+        int v;
+    } name;
+    name n = {2};
+
     return 0;
 }
