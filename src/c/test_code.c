@@ -50,7 +50,12 @@ int main(void)
     {
         int v;
     } name;
-    name n = {2};
+    name nom = {2};
+
+    int v = 123455;
+    char sv[12];
+    snprintf(sv, sizeof(sv), "%d", v);
+    printf("The converted string %s\n", sv);
 
     return 0;
 }

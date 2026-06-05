@@ -34,10 +34,14 @@ report.[0-9]_.[0-9]_.[0-9]_.[0-9]_.json
 .DS_Store
 
 # c executables
- [0-9]*
- min-common-val
- !*.c
- !*.h
- !*.md
- !*.ts
+[0-9]*
+min-common-val
+test_code
+test_shuffle
+!*.c
+!*.h
+!*.md
+!*.ts
 *.dSYM
+
+/test_code.dSYM/*
