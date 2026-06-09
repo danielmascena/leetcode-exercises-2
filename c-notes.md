@@ -205,3 +205,11 @@ Performance	Faster (no allocation overhead)	Slower (allocation + zeroing)
 
 Engineering Recommendation
 In your createBinaryTree implementation, the static approach is very efficient for LeetCode because it avoids heap fragmentation and allocation latency. However, in a real-world production system, the calloc approach (as seen in your earlier versions of the file) is usually preferred because it doesn't "hog" a large chunk of memory when the function isn't being used.
+
+// src/c/3689.maximum-total-subarray-value-i.c
+
+It looks like you have a case-sensitivity typo on line 30. In C, identifiers are case-sensitive, so maxtotalvalue is treated as a different (and in this case, undeclared) function from maxTotalValue.
+
+Because it was undeclared, the compiler implicitly assumed it returned an int. This caused the second warning, as %lld expects a long long, but the compiler thought it was receiving an int.
+
+Fixing the function name to match the definition resolves both issues.
