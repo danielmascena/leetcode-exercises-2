@@ -2,7 +2,9 @@ The segmentation fault occurs because of how you are using `memcpy`.
 
 The signature for `memcpy` is:
 
-`void *memcpy(void *dest, constvoid *src, size_t n);` 
+```c
+void *memcpy(void *dest, const void *src, size_t n); 
+```
 
 In your code, you have `memcpy(war, 0, (end + 1) * sizeof(int));`. You are passing `0` (which is interpreted as `NULL`) as the **source pointer** (`src`). This tells `memcpy` to start reading data from memory address `0`. Since accessing address `0` is prohibited for user applications, the CPU triggers a hardware exception that the OS handles by killing your process with a **segmentation fault**.
 
@@ -11,7 +13,7 @@ Zeroing Memory: To fill a block of memory with zeros, use memset instead of memc
 Memory Leak: You allocate memory for war using malloc but never free it.
 
 
-// 2196.create-binary-tree-from-descriptions.c
+// src/c/2196.create-binary-tree-from-descriptions.c
 
 In C, the syntax {...} is known as an initializer list. It is not a standalone expression and can only be used at the point where a variable is declared and initialized (e.g., int arr[] = {1, 2, 3};).
 
@@ -23,6 +25,7 @@ Pointer Assignment: descriptions[0] is of type int *. You cannot assign {20, 15,
 Array Decay: In C, an array name (or a compound literal representing an array) "decays" into a pointer to its first element. So, (int[]){20, 15, 1} becomes a pointer of type int *, which is exactly what descriptions[0] expects.
 
 I noticed a critical bug: your createBinaryTree function returns the address of a local variable root. This is Undefined Behavior because root is destroyed as soon as the function returns. You should allocate the nodes on the heap using malloc.
+
 ```c
 - struct TreeNode root;
 + struct TreeNode *root = malloc(sizeof(struct TreeNode));
@@ -213,3 +216,78 @@ It looks like you have a case-sensitivity typo on line 30. In C, identifiers are
 Because it was undeclared, the compiler implicitly assumed it returned an int. This caused the second warning, as %lld expects a long long, but the compiler thought it was receiving an int.
 
 Fixing the function name to match the definition resolves both issues.
+
+// 1365.how-many-numbers-are-smaller-than-the-current-number.c
+
+This is a great observation about how the C type system handles const differently for values versus pointers (and function signatures).
+
+1. Value Assignment: const int to int
+When you write const int num = nums[i]; and then prv = num;, you are performing an assignment by value.
+
+The Identifier: The const qualifier on num is a contract that says: "The variable named num cannot be changed after it is initialized."
+The Data: The actual integer value (e.g., 8) is just data. When you assign it to prv, CPU simply copies the bits from one memory location to another.
+Why it works: Assigning a const value to a non-const variable does not violate the const contract. You aren't changing num; you are just reading it. Once the value is copied into prv, prv is its own independent variable and can be modified freely.
+2. Function Parameters: void * vs const void *
+The reason you cannot omit const in the compare function parameters is due to Function Pointer Compatibility.
+
+The qsort function is defined in the standard library as:
+
+```c
+void qsort(void *base, size_t nmemb, size_t size,
+           int (*compar)(const void *, const void *));
+```
+
+The fourth argument is a pointer to a function. In C, function pointer types are very strict:
+
+A function taking const void * is a different type than a function taking void *.
+
+The Contract: const void * is a promise that the function will not modify the data it points to. qsort requires this promise because it needs to know your comparison logic won't accidentally corrupt the array while sorting it.
+
+Type Safety: If you pass a function that takes void * (meaning "I might change this data") to a parameter expecting const void * ("I promise not to change this data"), the compiler flags it as an incompatible pointer type. The "mutable" function is more permissive than the "constant" requirement, so it cannot be safely used where a read-only guarantee is required.
+
+Code Suggestions
+
+I noticed a logic error in your compare function: you are subtracting the memory addresses of the elements instead of the values stored at those addresses. I've fixed that below, along with adding the missing *returnSize assignment.
+
+```c
+int compare(const void *a, const void *b)
+{
+--    return (int *)a - (int *)b;
+++    return (*(int *)a - *(int *)b);
+}
+```
+
+It’s a subtle but critical distinction in C. The change isn't actually caused by the parentheses themselves, but by the dereference operator (*) that sits outside of them.
+
+Here is the breakdown of what is happening in those two expressions:
+
+1. The Original: (int *)a - (int *)b
+(int *)a: This tells the compiler, "Treat this generic memory address a as the address of an integer." It is still just a memory address (e.g., 0x7ffee123).
+The Subtraction: When you subtract two pointers of the same type in C, the result is the "distance" between them in terms of elements.
+Result: You are calculating how many integers apart these two memory locations are. If a is the first element of an array and b is the second, this returns -1. It tells qsort nothing about the actual numbers (like 8 or 1) stored inside the array; it only tells it where they sit in memory.
+2. The Fixed Version: *(int *)a - *(int *)b
+(int *)a: Same as above, we cast the generic pointer to an integer pointer.
+The Outer *: This is the dereference operator. It tells the CPU: "Go to the address calculated in the parentheses and fetch the actual value stored there."
+Result: If the memory address a holds the number 8, then *(int *)a evaluates to the integer 8. The expression 8 - 1 returns 7, which is what qsort needs to know that 8 is greater than 1.
+Why the Parentheses are Needed
+The parentheses (int *)a are required because of Operator Precedence. In C, the dereference operator * and the type cast (type) have the same precedence and associate from right to left. Without the inner parentheses, the compiler might get confused about whether you are trying to dereference a void * (which is illegal) or cast the result of a dereference.
+
+By writing *(int *)a, you explicitly tell the compiler:
+
+First: Cast a to an int *.
+Second: Dereference that int * to get the value.
+
+it is not possible to copy an array in C using that syntax. In C, arrays are not "first-class citizens" in the same way they are in languages like Python or JavaScript; you cannot assign one array directly to another, nor can you initialize an array from a pointer.
+
+Why int cnums[] = nums; fails:
+Array Initialization: The syntax int arr[] = ... is only valid when initializing an array with a literal list of values (e.g., {1, 2, 3}) or a string literal. It cannot be used to initialize an array from a pointer variable like nums.
+Assignment: Even if cnums was already declared, you cannot do cnums = nums; if cnums is an array. Arrays are non-modifiable lvalues.
+Pointer Confusion: If you wrote int *cnums = nums;, you would not be making a copy of the data. You would simply be creating a new pointer that points to the same memory address as nums. Any change to cnums[0] would also change nums[0].
+The Alternatives:
+The Manual Loop (What you are doing): This is the correct way to copy values when you also need to perform calculations during the process (like finding the maximum value bg). It avoids iterating through the array multiple times.
+memcpy: If you just want a raw copy of the memory without doing anything else, you can use memcpy from <string.h>:
+
+```c
+int *cnums = malloc(numsSize * sizeof(int));
+memcpy(cnums, nums, numsSize * sizeof(int));
+```

@@ -57,5 +57,10 @@ int main(void)
     snprintf(sv, sizeof(sv), "%d", v);
     printf("The converted string %s\n", sv);
 
+    int x = 9;
+    int *y;
+    y = &x;
+    printf("x: %d", *y);
+
     return 0;
 }
