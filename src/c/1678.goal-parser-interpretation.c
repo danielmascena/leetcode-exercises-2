@@ -42,10 +42,22 @@ char *interpret(char *command)
 
 int main(void)
 {
-    printf("Case 1: %s expected %s\n", interpret("G()(al)"), "Goal");
-    printf("Case 2: %s expected %s\n", interpret("G()()()()(al)"), "Gooooal");
-    printf("Case 3: %s expected %s\n", interpret("(al)G(al)()()G"), "alGalooG");
-    printf("Case 4: %s expected %s\n", interpret("G"), "G");
+    char *res1 = interpret("G()(al)");
+    printf("Case 1: %s expected %s\n", res1, "Goal");
+    free(res1);
+
+    char *res2 = interpret("G()()()()(al)");
+    printf("Case 2: %s expected %s\n", res2, "Gooooal");
+    free(res2);
+
+    char *res3 = interpret("(al)G(al)()()G");
+    printf("Case 3: %s expected %s\n", res3, "alGalooG");
+    free(res3);
+
+    char *res4 = interpret("G");
+    printf("Case 4: %s expected %s\n", res4, "G");
+    free(res4);
+
     return 0;
 }
 
