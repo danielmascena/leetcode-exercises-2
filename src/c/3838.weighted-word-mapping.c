@@ -1,11 +1,12 @@
 #include <stdio.h>
 #include <stdlib.h>
+#include <stddef.h>
 
 char *mapWordWeights(char **words, int wordsSize, int *weights, int weightsSize)
 {
     char *ans = malloc((wordsSize + 1) * sizeof(char));
 
-    for (int i = 0; i < wordsSize; i++)
+    for (size_t i = 0; i < (size_t)wordsSize; i++)
     {
         const char *word = words[i];
         int t = 0;
