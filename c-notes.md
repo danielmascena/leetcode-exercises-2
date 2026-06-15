@@ -758,3 +758,26 @@ struct ListNode {
 
 static struct ListNode *my_private_head = NULL; // This variable has internal linkage
 ```
+
+// 2095.delete-the-middle-node-of-a-linked-list.c
+
+In C, the concept of pointer decay is a specific behavior reserved for arrays. When you use an array name in most expressions, it "decays" into a pointer to its first element.
+
+Structs do not decay. In C, a struct is a value type, just like an int or a float.
+
+Here is why you are seeing that error:
+
+Value vs. Address: When you declare struct ListNode node4_1, the variable node4_1 represents the entire block of memory containing the struct's data.
+Function Signature: Your function deleteMiddle is defined to accept a struct ListNode * (a memory address).
+The Mismatch: Passing node4_1 attempts to pass the data structure itself by value, but the function is waiting for a pointer.
+To fix this, you must use the address-of operator (&) to explicitly pass the pointer to your local struct variable.
+
+Improvements and Bug Fixes
+
+If the list has only one node, n / 2 is 0. The loop doesn't run, and prev remains uninitialized. Attempting to access prev->next will cause a segmentation fault.
+
+Summary of Changes:
+Call Site Fix: Changed deleteMiddle(node4_1) to deleteMiddle(&node4_1) in main.
+Edge Case Handling: Added a check for head->next == NULL. This handles the single-node case and prevents the crash on prev->next.
+Safety: Initialized prev = NULL to avoid "uninitialized variable" warnings, although the new guard clause ensures the loop will always run at least once when n > 1.
+
