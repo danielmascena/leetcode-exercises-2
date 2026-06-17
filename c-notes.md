@@ -781,3 +781,176 @@ Call Site Fix: Changed deleteMiddle(node4_1) to deleteMiddle(&node4_1) in main.
 Edge Case Handling: Added a check for head->next == NULL. This handles the single-node case and prevents the crash on prev->next.
 Safety: Initialized prev = NULL to avoid "uninitialized variable" warnings, although the new guard clause ensures the loop will always run at least once when n > 1.
 
+```c
+char* processStr(const char* s) {
+    size_t cap = 16;
+    size_t len = 0;
+    char* res = malloc(cap);
+    if (!res) return NULL;
+    res[0] = '\0';
+    for (const char* p = s; *p; ++p) {
+        char c = *p;
+        if (c == '*') {
+            if (len) {
+                len--;
+                res[len] = '\0';
+            }
+        } else if (c == '#') {
+            size_t need = len * 2 + 1;
+            if (need &gt; cap) {
+                while (cap &lt; need) cap *= 2;
+                res = realloc(res, cap);
+                if (!res) return NULL;
+            }
+            memcpy(res + len, res, len);
+            len *= 2;
+            res[len] = '\0';
+        } else if (c == '%') {
+            for (size_t i = 0; i &lt; len / 2; ++i) {
+                char t = res[i];
+                res[i] = res[len - 1 - i];
+                res[len - 1 - i] = t;
+            }
+            res[len] = '\0';
+        } else {
+            if (len + 2 &gt; cap) {
+                while (cap &lt; len + 2) cap *= 2;
+                res = realloc(res, cap);
+                if (!res) return NULL;
+            }
+            res[len++] = c;
+            res[len] = '\0';
+        }
+    }
+    return res;
+}
+```
+
+This is an interesting string manipulation function. It implements a simple "editor" logic with backspacing (*), doubling (#), and reversing (%).
+
+Based on your code, here is an explanation of how realloc and memcpy are used to manage memory dynamically.
+
+1. realloc (Memory Resizing)
+In C, malloc gives you a fixed-size block of memory. When your string grows beyond that size (for example, when appending a character or doubling the string), you need more space. This is where realloc comes in.
+
+How it works in your code:
+```c
+res = realloc(res, cap);
+```
+
+- The Signature: void *realloc(void *ptr, size_t size);
+Purpose: It attempts to change the size of the memory block pointed to by res to the new cap.
+- The Magic: If there is enough free space immediately following the current block, realloc simply expands the block in place. If not, it finds a new, larger area in the heap, copies your existing string data there, frees the old memory block, and returns the new address.
+- Risk Management: Your code correctly checks if (!res) return NULL;. If the system is out of memory, realloc returns NULL.
+
+Pro-tip (The "Safety Temp" Pattern): There is a subtle danger in writing res = realloc(res, cap). If realloc fails and returns NULL, the variable res is overwritten with NULL, and you lose the pointer to the original memory block. This causes a memory leak. The "world-class" way to handle this is:
+
+```c
+char* tmp = realloc(res, cap);
+if (!tmp) {
+    free(res); // Clean up original memory
+    return NULL;
+}
+res = tmp;
+```
+
+2. memcpy (Raw Memory Copying)
+While you could use strcpy or a loop to copy characters, memcpy is used for high-performance, byte-level copying of memory blocks.
+
+How it works in your code:
+```c
+memcpy(res + len, res, len);
+```
+- The Signature: `void *memcpy(void *dest, const void *src, size_t n);`
+- In your context: When the # command is encountered, you want to double the string.
+ - Destination (dest): `res + len` (the memory address immediately following the current content).
+ - Source (src): res (the start of the current string).
+ - Size (n): len (copy exactly as many bytes as currently exist in the string).
+- Why use it? `memcpy` is usually heavily optimized by the compiler and CPU (using SIMD instructions). It is significantly faster than a manual `for` loop for large strings.
+
+The "Overlap" Rule: memcpy assumes that the source and destination memory regions do not overlap. In your case:
+
+- Source: `res[0 ... len-1]`
+- Destination: `res[len ... 2*len-1]` These are perfectly adjacent but separate, so `memcpy` is the correct tool. If they did overlap (e.g., copying a string to a position just one byte ahead of itself), you would need to use `memmove`.
+
+Code Quality Suggestions
+Your implementation is quite solid, but as a software engineer, I would suggest two improvements for robustness and readability:
+
+- Refined Capacity Check: In the # case, you calculate `size_t need = len * 2 + 1;`. This is great for the null terminator. In the character append case (`else`), you use `len + 2 > cap`. This works but is slightly non-standard; usually, we check if `len + 1 >= cap`.
+- Redundant Terminations: You are writing `res[len] = '\0'` inside every branch of the loop. While safe, it is slightly inefficient. You only really need to null-terminate the string once at the very end of the function, unless you plan to use string functions (like `printf` or `strlen`) inside the loop.
+Here is a slightly cleaner version of your resizing logic:
+
+```c
+// Helper to handle safe reallocation
+static char* grow(char* res, size_t* cap, size_t need) {
+    size_t new_cap = *cap;
+    while (new_cap < need) new_cap *= 2;
+    char* tmp = realloc(res, new_cap);
+    if (tmp) *cap = new_cap;
+    return tmp;
+}
+
+// ... inside processStr ...
+if (c == '#') {
+    size_t need = len * 2 + 1;
+    if (need > cap) {
+        res = grow(res, &cap, need);
+        if (!res) return NULL;
+    }
+    memcpy(res + len, res, len);
+    len *= 2;
+}
+```
+
+That is a great follow-up question. In the processStr function you provided, you used memcpy to double the string because the source and destination regions were perfectly adjacent but non-overlapping.
+
+Choosing between memcpy, memmove, and strcpy is all about performance, safety, and overlap handling.
+
+1. memcpy (The High-Performance Choice)
+Use case: When you know exactly how many bytes to copy and you are certain the source and destination do not overlap.
+
+In your code:
+```c
+memcpy(res + len, res, len);
+```
+
+- Source: `res[0]` to res`[len-1]`
+- Destination: `res[len]` to `res[2*len-1]`
+- These blocks are separate. `memcpy` is the fastest option here because the compiler can use highly optimized CPU instructions (like SIMD) without checking for overlaps or null terminators.
+
+2. `memmove` (The Safe Choice for Overlaps)
+
+Use case: When you need to move data within the same buffer and the source and destination regions might overlap.
+
+If you were trying to "insert" a character at the beginning of your string, you would do this:
+
+```c
+// Shifting the whole string right by 1 to make room at res[0]
+memmove(res + 1, res, len); 
+res[0] = 'A';
+```
+
+- Why not `memcpy`? If you used `memcpy` here, it might start copying from left-to-right. It would copy `res[0]` to `res[1]`, then when it tries to copy the "old" `res[1]` to `res[2]`, it actually copies the "new" `res[0]` again. You'd end up with a string of repeating characters.
+- The Logic: memmove is "overlap-aware." It detects the overlap and copies the data (often from back-to-front in this specific case) to ensure the original content is preserved during the move.
+
+3. `strcpy` (The String-Specific Choice)
+
+Use case: When you are working with null-terminated strings and you don't already know the length.
+
+In your function, you are tracking len manually, so you never actually need `strcpy`. However, if you didn't have len, you might have done:
+```c
+strcpy(res + len, some_other_string);
+```
+- How it differs: Unlike `memcpy`, which needs a `size_t n`, `strcpy` keeps copying until it encounters a `\0` (null terminator).
+- Performance: It is generally slower than `memcpy` because it has to check every single byte for the `\0` character.
+- The Danger: `strcpy` is a common source of security vulnerabilities (buffer overflows) because it doesn't check if the destination is large enough. In modern C, we prefer memcpy (if we know the size) or `strncpy` (to limit the copy). 
+
+Summary Table
+Function	Overlap Safe?	Knows Size?	Stops at `\0`?	Best Used For...
+`memcpy`	No	Yes	No	Speed. Copying distinct buffers or non-overlapping parts of one.
+`memmove`	Yes	Yes	No	Safety. Shifting data within the same array (e.g., inserting/deleting).
+`strcpy`	No	No	Yes	Convenience. Simple string copying when length isn't pre-calculated.
+
+Engineering Suggestion for your code
+
+While your use of `memcpy` for the doubling command (#) is correct and optimal, if you ever decide to add a "delete from start" command or an "insert" command to your editor logic, you should switch to `memmove` for those specific operations to avoid memory corruption.
