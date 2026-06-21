@@ -954,3 +954,128 @@ Function	Overlap Safe?	Knows Size?	Stops at `\0`?	Best Used For...
 Engineering Suggestion for your code
 
 While your use of `memcpy` for the doubling command (#) is correct and optimal, if you ever decide to add a "delete from start" command or an "insert" command to your editor logic, you should switch to `memmove` for those specific operations to avoid memory corruption.
+
+// 1672.richest-customer-wealth.c
+
+"incompatible pointer types passing 'int[2][3]' to parameter of type 'int **' [-Wincompatible-pointer-types] gcc"
+
+The warning comes from this call here
+```c
+maximumWealth(accounts1, 2,(int[]){3,3});
+```
+`maximumWealth` is declared as:
+```c
+int maximumWealth(int **accounts, int accountsSize, int *accountsColSize);
+```
+So GCC expects the first argument to be an `int **`: a pointer to a list `int *` row pointers.
+
+But `accounts1` is declared as:
+```c
+int accounts1[2][3] = {{1,2,3}, {3,2,1}};
+```
+When passed to a function, `accounts1` does *not* become `int **`. It decays to:
+```c
+int (*)[3]
+```
+
+That means: "pointer to an array of 3 ints."
+
+The memory layouts are different:
+```c
+int accounts1[2][3]
+```
+is on contiguous block:
+```txt
+1 2 3 3 2 1
+```
+But int `**accounts` expects something shaped like:
+```txt
+accounts[0] -> row0
+accounts[1] -> row1
+```
+a separate array of pointers. So inside your function, this line is unsafe for a real 2D array:
+```c
+const int *row = accounts[i];
+```
+because `accounts[i]` is interpreted as a pointer value loaded from memory, not as "the i-th 3-int row" of your contiguous array.
+
+For local testing, make row-pointer arrays:
+```c
+int accounts1_data[2][3] = {{1, 2, 3}, {3, 2, 1}};
+int *accounts1[] = {accounts1_data[0], accounts1_data[1]};
+
+printf("Case 1: answer %d\n",
+       maximumWealth(accounts1, 2, (int[]){3, 3}) == 6);
+```
+
+LeetCode uses `int **` because their harness builds pointer-to-row-pointer structure for you. Your manual C test arrays are normal contiguous 2D arrays, so you need an adapter array of row pointers when calling the LeetCode-style function.
+
+This fixes the warning because it changes the test data from a **real 2D array** into the shape that `maximumWealth` actually expects: an array of row pointers.
+
+Your function wants:
+
+```c
+int maximumWealth(int **accounts, int accountsSize, int *accountsColSize)
+```
+
+That means `accounts` should point to multiple `int *` values:
+
+```text
+accounts
+  |
+  v
+[ pointer to row 0 ]
+[ pointer to row 1 ]
+[ pointer to row 2 ]
+```
+
+The new code creates exactly that:
+
+```c
+int *accounts1[3] = {
+    (int[]){1, 2, 3},
+    (int[]){3, 2, 1}
+};
+```
+
+Breakdown:
+
+```c
+(int[]){1, 2, 3}
+```
+
+creates an anonymous array of `int`s. In this context, it decays to `int *`, a pointer to its first element.
+
+So this:
+
+```c
+int *accounts1[3]
+```
+
+means: “`accounts1` is an array of 3 pointers to int.”
+
+Visually:
+
+```text
+accounts1[0] -> 1 2 3
+accounts1[1] -> 3 2 1
+accounts1[2] -> unspecified, because only 2 entries were initialized
+```
+
+Then when you call:
+
+```c
+maximumWealth(accounts1, 2, (int[]){3, 3})
+```
+
+`accounts1` decays from `int *[3]` to `int **`, which matches the function parameter. Nice and tidy.
+
+One small cleanup: `accounts1` only needs size `2`, not `3`:
+
+```c
+int *accounts1[2] = {(int[]){1, 2, 3}, (int[]){3, 2, 1}};
+int *accounts2[3] = {(int[]){1, 5}, (int[]){7, 3}, (int[]){3, 5}};
+int *accounts3[3] = {(int[]){2, 8, 7}, (int[]){7, 1, 3}, (int[]){1, 9, 5}};
+```
+
+The key idea: `int a[2][3]` decays to `int (*)[3]`, but `int *a[2]` decays to `int **`. Your changed version matches LeetCode’s `int **` signature.
