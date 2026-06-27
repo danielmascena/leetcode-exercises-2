@@ -1079,3 +1079,162 @@ int *accounts3[3] = {(int[]){2, 8, 7}, (int[]){7, 1, 3}, (int[]){1, 9, 5}};
 ```
 
 The key idea: `int a[2][3]` decays to `int (*)[3]`, but `int *a[2]` decays to `int **`. Your changed version matches LeetCode’s `int **` signature.
+
+// src/c/1189.maximum-number-of-balloons.c
+
+```c
+int maxNumberOfBalloons(char* text) {
+    // think: a map to counts each char
+    int map[255]={0};
+    while(*text!='\0'){
+        map[*text]++;
+        text++;
+    }
+    int ret=map['b'];
+    if(map['a']<ret) ret=map['a'];
+    int l_set=map['l']/2;
+    if(l_set<ret) ret=l_set;
+    int o_set=map['o']/2;
+    if(o_set<ret) ret=o_set;
+    if(map['n']<ret) ret=map['n'];
+    return ret;
+}
+```
+This function solves LeetCode’s **“Maximum Number of Balloons”** problem: given a string `text`, it returns how many times you can form the word `"balloon"` using the characters in `text`.
+
+```c
+int map[255] = {0};
+```
+
+This creates an array of character counts. Each character’s ASCII value is used as an index. For example:
+
+```c
+map['b']
+map['a']
+map['l']
+```
+
+store how many `b`, `a`, and `l` characters appear in `text`.
+
+```c
+while (*text != '\0') {
+    map[*text]++;
+    text++;
+}
+```
+
+This loops through the string until the null terminator `'\0'`.
+
+For each character:
+
+```c
+map[*text]++;
+```
+
+increments that character’s count.
+
+Then:
+
+```c
+text++;
+```
+
+moves to the next character.
+
+After counting all characters, the code checks how many complete `"balloon"` words can be made.
+
+The word `"balloon"` needs:
+
+```text
+b: 1
+a: 1
+l: 2
+o: 2
+n: 1
+```
+
+So the answer is limited by the scarcest required letter.
+
+```c
+int ret = map['b'];
+```
+
+Start by assuming the number of balloons is limited by the number of `b`s.
+
+```c
+if (map['a'] < ret) ret = map['a'];
+```
+
+If there are fewer `a`s than `b`s, update the answer.
+
+```c
+int l_set = map['l'] / 2;
+if (l_set < ret) ret = l_set;
+```
+
+Since each `"balloon"` needs two `l`s, divide the number of `l`s by 2.
+
+```c
+int o_set = map['o'] / 2;
+if (o_set < ret) ret = o_set;
+```
+
+Same idea for `o`, because `"balloon"` needs two `o`s.
+
+```c
+if (map['n'] < ret) ret = map['n'];
+```
+
+Finally, check `n`.
+
+```c
+return ret;
+```
+
+Return the smallest available amount among the required characters.
+
+Example:
+
+```c
+text = "loonbalxballpoon"
+```
+
+Counts include enough letters to form `"balloon"` twice, so the function returns:
+
+```c
+2
+```
+
+One small improvement: since standard ASCII has 128 characters, and `char` can sometimes be signed, a safer version would use:
+
+```c
+int map[256] = {0};
+map[(unsigned char)*text]++;
+```
+
+But for LeetCode’s lowercase input, your version works fine.
+
+// src/c/24.swap-nodes-in-pairs.c
+
+The issue you're seeing is a classic C pitfall involving unsigned integer underflow and how printf interprets types.
+
+The Root Cause: size_t is Unsigned
+The Type: You declared st as size_t. This is an unsigned integer type, meaning it can only represent non-negative numbers (0 and greater).
+
+The Underflow: Let's trace the loop:
+
+The loop starts, and st is 3. The condition 3 > 0 is true. It prints st 3 and st becomes 1.
+Next, st is 1. The condition 1 > 0 is true. It prints st 1 and st becomes 1 - 2.
+Here's the key moment: Since st is unsigned, it cannot become -1. Instead, it underflows and wraps around to the largest possible value for a size_t (e.g., 18446744073709551615 on a 64-bit system).
+The Loop Condition: The new, very large value of st is still greater than 0, so the loop continues.
+
+The printf Illusion:
+
+You are printing this very large unsigned number using the %ul format specifier (for unsigned long).
+The bit pattern for the largest possible unsigned integer (1111...1111) is identical to the bit pattern for the signed integer -1 in two's complement, which is the standard for modern computers.
+It seems your printf implementation, when given %ul and a value that has the same bit pattern as -1, is printing it as -1. While %zu is the correct specifier for size_t, the underlying issue is the type mismatch between the unsigned value and what you're seeing. The program is trying to tell you the value is the largest possible unsigned number, which bit-wise is the same as -1.
+The segmentation fault happens right after because the code then tries to access nodes[st], where st is now a massive out-of-bounds index.
+
+The Fix
+The most direct fix is to change the type of st from size_t to a signed integer type, like ssize_t (the signed version of size_t) or simply long. This allows st to become negative, which will correctly terminate the while (st > 0) loop.
+

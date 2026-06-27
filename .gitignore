@@ -42,6 +42,7 @@ test_shuffle
 !*.h
 !*.md
 !*.ts
+!*.txt
 *.dSYM
 
 /test_code.dSYM/*
