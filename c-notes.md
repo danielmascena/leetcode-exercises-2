@@ -1238,3 +1238,63 @@ The segmentation fault happens right after because the code then tries to access
 The Fix
 The most direct fix is to change the type of st from size_t to a signed integer type, like ssize_t (the signed version of size_t) or simply long. This allows st to become negative, which will correctly terminate the while (st > 0) loop.
 
+
+`char patterns3[][] = {"a", "a", "a"};` is wrong because C requires every array dimension except the first one to be known.
+
+For a 2D char array, the compiler needs to know how wide each row is:
+
+```c
+char patterns3[][2] = {"a", "a", "a"};
+```
+
+This works because each `"a"` is actually two chars: `'a'` and the terminating `'\0'`.
+
+So this creates real storage like:
+
+```c
+patterns3[0] = {'a', '\0'}
+patterns3[1] = {'a', '\0'}
+patterns3[2] = {'a', '\0'}
+```
+
+But this does not work:
+
+```c
+char patterns3[][] = {"a", "a", "a"};
+```
+
+because the compiler can infer there are 3 rows, but it cannot infer the column size from an omitted inner dimension in this kind of declaration.
+
+Different from:
+
+```c
+char* patterns3[] = {"a", "a", "a"};
+```
+
+This is not a 2D char array. It is an array of pointers.
+
+It means:
+
+```c
+patterns3[0] -> "a"
+patterns3[1] -> "a"
+patterns3[2] -> "a"
+```
+
+Each element is a `char *` pointing at a string literal. The array stores pointers, not the characters themselves.
+
+Main difference:
+
+```c
+char patterns3[][2] = {"a", "a", "a"};
+```
+
+stores copies of the strings in writable array storage.
+
+```c
+char* patterns3[] = {"a", "a", "a"};
+```
+
+stores pointers to string literals, which you should not modify.
+
+For your LeetCode function, `char* patterns3[] = {"a", "a", "a"};` is usually the right shape if the parameter expects `char **patterns`.
