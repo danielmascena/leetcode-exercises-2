@@ -1298,3 +1298,32 @@ char* patterns3[] = {"a", "a", "a"};
 stores pointers to string literals, which you should not modify.
 
 For your LeetCode function, `char* patterns3[] = {"a", "a", "a"};` is usually the right shape if the parameter expects `char **patterns`.
+
+Yes, exactly: the crash happens because you pass a **string literal** here:
+
+```c
+reverseWords("Let's take LeetCode contest")
+```
+
+Your function mutates the string:
+
+```c
+s[p] = s[j];
+s[j] = t;
+```
+
+String literals in C are not safely writable. They usually live in read-only memory, so when your code reaches the first space at index `5` and tries to reverse `"Let's"`, it writes into read-only storage and macOS raises a `bus error`.
+
+Use a mutable `char[]` for local testing:
+
+```c
+int main(void)
+{
+    char s[] = "Let's take LeetCode contest";
+    printf("Case 1: answer %s\n", reverseWords(s));
+    return 0;
+}
+```
+
+Tiny extra note: your current function only reverses when it sees a space, so it will miss the final word `"contest"` unless you also reverse after the loop or handle `'\0'` as a boundary. LeetCode will give your function a mutable buffer, so the literal issue is mostly from your local `main`.
+
