@@ -62,5 +62,10 @@ int main(void)
     y = &x;
     printf("x: %d", *y);
 
+    char **zx = malloc(sizeof(char *));
+    zx[0] = 'x';
+    zx[0] = zx[0] + 'c';
+    printf("%s\n", zx[0]);
+
     return 0;
 }

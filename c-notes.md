@@ -1327,3 +1327,269 @@ int main(void)
 
 Tiny extra note: your current function only reverses when it sees a space, so it will miss the final word `"contest"` unless you also reverse after the loop or handle `'\0'` as a boundary. LeetCode will give your function a mutable buffer, so the literal issue is mostly from your local `main`.
 
+
+In [test_code.c](/Users/danielmascena/workspace/leetcode-exercises-2/src/c/test_code.c:65), this is the problematic bit:
+
+```c
+char **zx = malloc(sizeof(char *));
+zx[0] = 'x';
+zx[0] = zx[0] + 'c';
+printf("%s\n", zx[0]);
+```
+
+`zx[0]` has type `char *`, meaning “pointer to a string/char buffer”. But `'x'` is a single `char`, which in C is treated like an integer value. So this tries to assign an integer to a pointer.
+
+Also:
+
+```c
+zx[0] = zx[0] + 'c';
+```
+
+does not append `'c'`. It moves the pointer forward by the numeric value of `'c'`, which is pointer arithmetic.
+
+To make the string `"xc"`, use a real character array/buffer:
+
+```c
+char zx[3];
+
+zx[0] = 'x';
+zx[1] = 'c';
+zx[2] = '\0';
+
+printf("%s\n", zx);
+```
+
+Or, dynamically:
+
+```c
+char *zx = malloc(3 * sizeof(char));
+
+zx[0] = 'x';
+zx[1] = 'c';
+zx[2] = '\0';
+
+printf("%s\n", zx);
+
+free(zx);
+```
+
+If you specifically want `char **`, then `zx[0]` must point to allocated string memory:
+
+```c
+char **zx = malloc(sizeof(char *));
+zx[0] = malloc(3);
+
+zx[0][0] = 'x';
+zx[0][1] = 'c';
+zx[0][2] = '\0';
+
+printf("%s\n", zx[0]);
+
+free(zx[0]);
+free(zx);
+```
+
+Rule of thumb: use `'x'` for one character, `"x"` for a string. To append to a C string, write into a buffer and always leave space for the final `'\0'`.
+
+Because your `qsort` arguments are in the wrong order.
+
+Your code has:
+
+```c
+qsort(carr, sizeof(int), arrSize, compare);
+```
+
+But the signature is:
+
+```c
+qsort(base, number_of_elements, size_of_each_element, compare);
+```
+
+So it should be:
+
+```c
+qsort(carr, arrSize, sizeof(int), compare);
+```
+
+Right now, for `{100, 100, 100}`, you’re telling `qsort`:
+
+```c
+number_of_elements = sizeof(int) // usually 4
+size_of_each_element = arrSize   // 3
+```
+
+So `qsort` thinks it has 4 elements of 3 bytes each. That makes it read/write memory using the wrong boundaries, corrupting the `int` values. `1677721600` is `100 << 24`, which is exactly the kind of weird byte-shifted value you get when an `int`’s bytes are rearranged or partially overwritten.
+
+Fix:
+
+```c
+qsort(carr, arrSize, sizeof(int), compare);
+```
+
+Also this debug loop has another bug:
+
+```c
+for (int i = 0; i < size; i++)
+{
+    printf("%d\n", carr[i]);
+}
+```
+
+`size` is `carr[arrSize - 1] + 1`, not the length of `carr`. Use `arrSize` there:
+
+```c
+for (int i = 0; i < arrSize; i++)
+{
+    printf("%d\n", carr[i]);
+}
+```
+
+Because `sizeof(num1)` changes meaning.
+
+With:
+
+```c
+int num1[] = {3, 1, -2, -5, 2, -4};
+```
+
+`num1` is an actual array of 6 `int`s, so:
+
+```c
+sizeof(num1) / sizeof(num1[0])
+```
+
+means:
+
+```c
+6 * sizeof(int) / sizeof(int) == 6
+```
+
+But with:
+
+```c
+int *num1 = (int[]){3, 1, -2, -5, 2, -4};
+```
+
+`num1` is a pointer to the first element of a compound literal array. So:
+
+```c
+sizeof(num1)
+```
+
+is the size of the pointer itself, not the array. On your machine, probably:
+
+```c
+sizeof(int *) == 8
+sizeof(int) == 4
+```
+
+So this becomes:
+
+```c
+8 / 4 == 2
+```
+
+That means you call:
+
+```c
+rearrangeArray(num1, 2, &returnSize1);
+```
+
+Your function only processes the first two values: `3` and `1`. Since both are positive, it writes:
+
+```c
+ans[0] = 3;
+ans[2] = 1; // out of bounds, because ans only has size 2
+```
+
+That out-of-bounds write causes undefined behavior, which is why you see weird output like:
+
+```text
+3
+0
+```
+
+Use an explicit size if `num1` is a pointer:
+
+```c
+int *num1 = (int[]){3, 1, -2, -5, 2, -4};
+int num1Size = 6;
+
+int *ans1 = rearrangeArray(num1, num1Size, &returnSize1);
+```
+
+Or keep the original array form:
+
+```c
+int num1[] = {3, 1, -2, -5, 2, -4};
+int *ans1 = rearrangeArray(num1, sizeof(num1) / sizeof(num1[0]), &returnSize1);
+```
+
+Tiny rule of thumb: `sizeof(array)` gives the whole array size only while the variable is actually declared as an array in that scope. Once it is a pointer, `sizeof(pointer)` only gives the pointer size.
+
+Because `sizeof(*num1)` is the size of **one element**, not the number of elements.
+
+If you have:
+
+```c
+int *num1 = (int[]){3, 1, -2, -5, 2, -4};
+```
+
+then:
+
+```c
+*num1
+```
+
+means “the `int` that `num1` points to”, which is the first element, `3`.
+
+So:
+
+```c
+sizeof(*num1)
+```
+
+is the same as:
+
+```c
+sizeof(int)
+```
+
+Probably `4`.
+
+Then if you do:
+
+```c
+sizeof(*num1) / sizeof(num1[0])
+```
+
+you get:
+
+```c
+sizeof(int) / sizeof(int) == 1
+```
+
+So your function receives `numsSize == 1`, not `6`.
+
+The useful distinction is:
+
+```c
+sizeof(num1)     // if num1 is int[]: whole array size
+sizeof(num1)     // if num1 is int *: pointer size
+sizeof(*num1)    // size of one int
+sizeof(num1[0])  // size of one int
+```
+
+Once you write `int *num1`, C no longer remembers that the pointer came from a 6-element compound literal. You need to keep the length separately:
+
+```c
+int *num1 = (int[]){3, 1, -2, -5, 2, -4};
+int num1Size = 6;
+```
+
+Or keep it as an array:
+
+```c
+int num1[] = {3, 1, -2, -5, 2, -4};
+int num1Size = sizeof(num1) / sizeof(num1[0]);
+```
