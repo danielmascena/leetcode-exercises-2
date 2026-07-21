@@ -2351,3 +2351,279 @@ pb[0] == 1
 
 That is the key: `qsort` passes pointers to the elements being sorted. Since your elements are themselves pointers, the comparator receives pointer-to-pointer.
 
+
+The root error is this line:
+
+[1260.shift-2-d-grid.c](/Users/danielmascena/workspace/leetcode-exercises-2/1260.shift-2-d-grid.c:25)
+
+```c
+returnColumnSizes[i] = &gridColSize[i];
+```
+
+`returnColumnSizes` has type:
+
+```c
+int **returnColumnSizes
+```
+
+That means:
+
+- `returnColumnSizes` points to LeetCode’s local variable, usually something like `int *ret_colsize`
+- `*returnColumnSizes` should point to your malloc’d array of column sizes
+- `(*returnColumnSizes)[i]` is where each row’s column count goes
+
+But your code uses:
+
+```c
+returnColumnSizes[i]
+```
+
+That indexes the pointer itself, not the allocated array. So when `i == 1`, you write past LeetCode’s stack variable `ret_colsize`. That matches the ASan report exactly:
+
+```txt
+'ret_colsize' ... Memory access at offset 168 overflows this variable
+WRITE of size 8
+```
+
+You are writing an 8-byte pointer into stack memory where LeetCode only expected one `int *` variable.
+
+The fix is:
+
+```c
+(*returnColumnSizes)[i] = gridColSize[i];
+```
+
+So this block should be:
+
+```c
+*returnColumnSizes = malloc(sizeof(int) * gridSize);
+
+for (int i = 0; i < gridSize; i++)
+{
+    ans[i] = malloc(sizeof(int) * gridColSize[i]);
+    (*returnColumnSizes)[i] = gridColSize[i];
+
+    for (int j = 0; j < gridColSize[i]; j++)
+    {
+        ans[i][j] = grid[i][j];
+    }
+}
+```
+
+Why it worked locally: your local `main` didn’t use AddressSanitizer, and the invalid stack write happened to not crash. Undefined behavior can look fine locally and explode in LeetCode’s stricter runtime.
+
+One more non-crashing issue: `lastCol` is malloc’d inside every shift and never freed. Add:
+
+```c
+free(lastCol);
+```
+
+before `k--;`.
+
+
+Yes: `&gridColSize[i]` is a pointer to an integer.
+
+If:
+
+```c
+int gridColSize[] = {3, 3, 3};
+```
+
+then:
+
+```c
+gridColSize[i]   // int
+&gridColSize[i]  // int *
+```
+
+So this part of your intuition is right.
+
+The confusing part is that LeetCode wants you to fill an `int *`, but it passes you an `int **` so you can assign that `int *` back to the caller.
+
+Think of the caller like this:
+
+```c
+int *ret_colsize;
+int **answer = shiftGrid(..., &ret_colsize);
+```
+
+So inside your function:
+
+```c
+returnColumnSizes == &ret_colsize
+```
+
+Its type is `int **` because it points to an `int *` variable.
+
+What LeetCode expects you to do is:
+
+```c
+*returnColumnSizes = malloc(sizeof(int) * gridSize);
+```
+
+Now `ret_colsize` points to an array of ints:
+
+```txt
+ret_colsize
+   |
+   v
+[ 3 ][ 3 ][ 3 ]
+```
+
+Then you fill that array like this:
+
+```c
+(*returnColumnSizes)[i] = gridColSize[i];
+```
+
+That assigns an `int` into the allocated int array.
+
+Your code did this instead:
+
+```c
+returnColumnSizes[i] = &gridColSize[i];
+```
+
+That means: “treat `returnColumnSizes` itself as an array of `int *` slots, and store a pointer into slot `i`.”
+
+But `returnColumnSizes` is not an array you own. It points to just one stack variable from LeetCode:
+
+```txt
+returnColumnSizes
+   |
+   v
+[ ret_colsize ]   // only one int * variable
+```
+
+So:
+
+```c
+returnColumnSizes[0]
+```
+
+is the same as:
+
+```c
+*returnColumnSizes
+```
+
+That one is valid.
+
+But:
+
+```c
+returnColumnSizes[1]
+```
+
+means “the next `int *` variable after `ret_colsize` on the stack.”
+
+There is no next valid variable. That is the stack-buffer-overflow.
+
+About the 8-byte pointer: on LeetCode’s 64-bit machine, pointers are 8 bytes. So this assignment:
+
+```c
+returnColumnSizes[i] = &gridColSize[i];
+```
+
+writes an `int *`, which is 8 bytes.
+
+But the destination is wrong. You are writing those 8 bytes into memory past LeetCode’s local `ret_colsize` stack variable.
+
+This is the correct contrast:
+
+```c
+returnColumnSizes[i] = &gridColSize[i];
+// wrong target, wrong value shape
+// writes an int * into the caller's stack area
+```
+
+versus:
+
+```c
+(*returnColumnSizes)[i] = gridColSize[i];
+// correct target, correct value shape
+// writes an int into the malloc'd column-size array
+```
+
+And no, `returnColumnSizes[i]` does not “decay to an array.” Array decay happens when an actual array expression is used in most value contexts. Here, `returnColumnSizes` is already a pointer, not an array. Pointer indexing is just arithmetic:
+
+```c
+returnColumnSizes[i]
+```
+
+means:
+
+```c
+*(returnColumnSizes + i)
+```
+
+So with `i = 1`, C literally moves forward by `sizeof(int *)` bytes and writes there. Since LeetCode only gave you space for one `int *` variable, that overflows.
+
+The mental model:
+
+```c
+int **returnColumnSizes
+```
+
+means:
+
+```txt
+pointer to caller's int* variable
+```
+
+Then:
+
+```c
+*returnColumnSizes
+```
+
+means:
+
+```txt
+the actual int* column-size array you must create
+```
+
+Then:
+
+```c
+(*returnColumnSizes)[i]
+```
+
+means:
+
+```txt
+the i-th int inside that column-size array
+```
+
+Not for LeetCode, no.
+
+```c
+*returnColumnSizes = (int[]){3, 3, 3};
+```
+
+creates a compound literal array with automatic storage duration inside the function. In plain terms: it lives only while `shiftGrid` is running. After the function returns, `*returnColumnSizes` points to memory that is no longer valid.
+
+LeetCode specifically says:
+
+```c
+*columnSizes array must be malloced
+```
+
+So you need:
+
+```c
+*returnColumnSizes = malloc(sizeof(int) * gridSize);
+
+for (int i = 0; i < gridSize; i++) {
+    (*returnColumnSizes)[i] = gridColSize[i];
+}
+```
+
+For your specific 3x3 example, this would work during local printing only by luck:
+
+```c
+*returnColumnSizes = (int[]){3, 3, 3};
+```
+
+but it violates the contract and can break after return. LeetCode expects to own and later free that returned array.
+
