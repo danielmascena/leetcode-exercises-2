@@ -2627,3 +2627,33 @@ For your specific 3x3 example, this would work during local printing only by luc
 
 but it violates the contract and can break after return. LeetCode expects to own and later free that returned array.
 
+
+`abs` is in `stdlib.h` because the original C library treats it as an **integer utility**, not a floating-point math function.
+
+In C:
+
+```c
+int abs(int n);
+```
+
+works on `int` values and returns an `int`. `stdlib.h` contains general-purpose utilities: conversion, memory allocation, process control, sorting/searching, integer arithmetic helpers like `abs`, `labs`, `llabs`, etc.
+
+`math.h` is for **floating-point mathematical functions**, like:
+
+```c
+double fabs(double x);
+float fabsf(float x);
+long double fabsl(long double x);
+```
+
+So the split is roughly:
+
+```c
+#include <stdlib.h> // abs, labs, llabs: integer absolute value
+#include <math.h>   // fabs, fabsf, fabsl: floating-point absolute value
+```
+
+Historically, C kept integer utility functions separate from floating-point math library functions. Also, on many older systems, `math.h` functions lived in a separate math library you had to link with `-lm`, while `abs` was part of the ordinary standard library.
+
+So: `abs` is in `stdlib.h` because it is for integers; `math.h` has `fabs` for real-number math.
+
